@@ -11,7 +11,6 @@ export interface IWordSearchJson {
 
 export interface IWordSearchWord {
   word: string;
-  clue?: string;
   found: boolean;
 }
 

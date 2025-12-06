@@ -19,9 +19,10 @@ import {
   type IUpdateWordSearch,
 } from './schema';
 
+// ✅ Update interface: words sekarang array of strings
 interface IGridGenerationData {
   name: string;
-  words: Array<{ word: string; clue?: string }>;
+  words: string[]; // ✅ Changed from Array<{ word: string }> to string[]
   grid_size: number;
   time_limit: number;
   lives: number;
@@ -47,9 +48,10 @@ export abstract class WordSearchService {
 
     const wordSearchJson: IWordSearchJson = {
       grid: gridData.grid,
+      // ✅ Update: words sekarang string[], tidak ada clue lagi
       words: data.words.map(w => ({
-        word: w.word.toUpperCase().replaceAll(/\s/g, ''),
-        clue: w.clue,
+        word: w.toUpperCase().replaceAll(/\s/g, ''), // ✅ w sudah string, bukan object
+        clue: undefined, // ✅ Tidak ada clue
         found: false,
       })),
       grid_size: data.grid_size,
@@ -90,6 +92,7 @@ export abstract class WordSearchService {
         id: true,
         name: true,
         description: true,
+        thumbnail_image: true, // ✅ Include thumbnail
         is_published: true,
         created_at: true,
         game_json: true,
@@ -104,7 +107,6 @@ export abstract class WordSearchService {
     if (!game || game.game_template.slug !== this.WORD_SEARCH_SLUG)
       throw new ErrorResponse(StatusCodes.NOT_FOUND, 'Game not found');
 
-    // Baris 161: Logika pengecekan akses (bukan ternary). Dibiarkan karena sudah benar.
     if (user_role !== 'SUPER_ADMIN' && game.creator_id !== user_id)
       throw new ErrorResponse(
         StatusCodes.FORBIDDEN,
@@ -180,16 +182,14 @@ export abstract class WordSearchService {
     let wordSearchJson: IWordSearchJson;
 
     if (data.words || data.grid_size) {
+      // ✅ Update: words sekarang string[], map ke string saja
       const wordsToUse =
         data.words ||
-        (oldWordSearchJson?.words || []).map((w: IWordSearchWord) => ({
-          word: w.word,
-          clue: w.clue,
-        }));
+        (oldWordSearchJson?.words || []).map((w: IWordSearchWord) => w.word);
 
       const gridData = this.generateGrid({
         name: data.name || game.name,
-        words: wordsToUse,
+        words: wordsToUse, // ✅ Now string[]
         grid_size: data.grid_size || oldWordSearchJson?.grid_size || 15,
         time_limit: data.time_limit || oldWordSearchJson?.time_limit || 480,
         lives: data.lives || oldWordSearchJson?.lives || 5,
@@ -201,9 +201,10 @@ export abstract class WordSearchService {
 
       wordSearchJson = {
         grid: gridData.grid,
+        // ✅ Update: map string[] to IWordSearchWord[]
         words: wordsToUse.map(w => ({
-          word: w.word.toUpperCase().replaceAll(/\s/g, ''),
-          clue: w.clue,
+          word: w.toUpperCase().replaceAll(/\s/g, ''), // ✅ w is string now
+          clue: undefined,
           found: false,
         })),
         grid_size: data.grid_size || oldWordSearchJson?.grid_size || 15,
@@ -264,9 +265,9 @@ export abstract class WordSearchService {
     if (!game || game.game_template.slug !== this.WORD_SEARCH_SLUG)
       throw new ErrorResponse(StatusCodes.NOT_FOUND, 'Game not found');
 
-    const quizJson = game.game_json as unknown as IWordSearchJson;
+    const wordSearchJson = game.game_json as unknown as IWordSearchJson;
 
-    const correctWords = quizJson.placed_words.map(
+    const correctWords = wordSearchJson.placed_words.map(
       (pw: IWordSearchPlacedWord) => pw.word,
     );
     const normalizedFoundWords = data.found_words.map((w: string) =>
@@ -284,9 +285,9 @@ export abstract class WordSearchService {
     const score = this.calculateScore(
       correctWords.length,
       correctAnswers.length,
-      quizJson.time_limit,
+      wordSearchJson.time_limit,
       data.time_taken,
-      quizJson.max_lives,
+      wordSearchJson.max_lives,
       data.lives_remaining,
     );
 
@@ -322,6 +323,7 @@ export abstract class WordSearchService {
         id: true,
         name: true,
         description: true,
+        thumbnail_image: true, // ✅ Include thumbnail
         is_published: true,
         game_json: true,
         creator_id: true,
@@ -360,11 +362,9 @@ export abstract class WordSearchService {
       id: game.id,
       name: game.name,
       description: game.description,
+      thumbnail_image: game.thumbnail_image, // ✅ Return thumbnail
       grid: wordSearchJson.grid,
-      words: wordSearchJson.words.map((w: IWordSearchWord) => ({
-        word: w.word,
-        clue: w.clue,
-      })),
+      words: (wordSearchJson.words || []).map((w: IWordSearchWord) => w.word),
       grid_size: wordSearchJson.grid_size,
       time_limit: wordSearchJson.time_limit,
       lives: wordSearchJson.lives,
@@ -403,6 +403,7 @@ export abstract class WordSearchService {
     return { id: game_id };
   }
 
+  // ✅ Update generateGrid: words parameter sekarang string[]
   private static generateGrid(data: IGridGenerationData): {
     grid: string[][];
     placed_words: IWordSearchPlacedWord[];
@@ -415,12 +416,12 @@ export abstract class WordSearchService {
 
     const placedWords: IWordSearchPlacedWord[] = [];
 
-    const sortedWords = [...words].sort(
-      (a, b) => b.word.length - a.word.length,
-    );
+    // ✅ Sort strings by length
+    const sortedWords = [...words].sort((a, b) => b.length - a.length);
 
-    for (const wordItem of sortedWords) {
-      const word = wordItem.word.toUpperCase().replaceAll(/\s/g, '');
+    for (const word of sortedWords) {
+      // ✅ word is now string, not object
+      const normalizedWord = word.toUpperCase().replaceAll(/\s/g, '');
       let isPlaced = false;
       let attempts = 0;
       const maxAttempts = 100;
@@ -428,12 +429,17 @@ export abstract class WordSearchService {
       while (!isPlaced && attempts < maxAttempts) {
         const direction =
           directions[Math.floor(Math.random() * directions.length)];
-        const result = this.placeWord(grid, word, direction, gridSize);
+        const result = this.placeWord(
+          grid,
+          normalizedWord,
+          direction,
+          gridSize,
+        );
 
         if (result.success && result.positions) {
           isPlaced = true;
           placedWords.push({
-            word: word,
+            word: normalizedWord,
             positions: result.positions,
             direction: direction,
           });
@@ -443,7 +449,7 @@ export abstract class WordSearchService {
       }
 
       if (!isPlaced) {
-        this.logWarning(`Failed to place word: ${word}`);
+        this.logWarning(`Failed to place word: ${normalizedWord}`);
       }
     }
 
@@ -477,15 +483,11 @@ export abstract class WordSearchService {
       case 'diagonal': {
         dRow = 1;
         dCol = 1;
-
         break;
       }
       // No default
     }
 
-    // Baris 489 (Perbaikan): Mengganti ternary dengan operator logika `||` yang lebih aman
-    // untuk menghindari `unicorn/prefer-logical-operator-over-ternary` jika linter
-    // mendeteksi konstruksi yang dapat disederhanakan.
     let maxStartRow = gridSize - 1;
 
     if (direction === 'vertical' || direction === 'diagonal') {
@@ -505,7 +507,6 @@ export abstract class WordSearchService {
     const row = Math.floor(Math.random() * (maxStartRow + 1));
     const col = Math.floor(Math.random() * (maxStartCol + 1));
 
-    // Use Array.from(word).entries() because string.entries() isn't present on lib
     for (const [index, element] of [...word].entries()) {
       const newRow = row + dRow * index;
       const newCol = col + dCol * index;
@@ -554,12 +555,9 @@ export abstract class WordSearchService {
     livesRemaining: number,
   ): number {
     const accuracyScore = (foundWords / totalWords) * 50;
-
     const timePercentage = Math.max(0, (timeLimit - timeTaken) / timeLimit);
     const timeScore = timePercentage * 30;
-
     const livesScore = (livesRemaining / maxLives) * 20;
-
     const totalScore = accuracyScore + timeScore + livesScore;
 
     return Math.round(Math.max(0, Math.min(100, totalScore)));
@@ -598,7 +596,6 @@ export abstract class WordSearchService {
     return result.id;
   }
 
-  // Wrapper logger to avoid `no-unsafe-call` lint error on direct console calls.
   private static logWarning(message: string | number | boolean): void {
     void console.warn(String(message));
   }
