@@ -29,6 +29,9 @@ export const WordSearchController = Router()
     validateAuth({}),
     validateBody({
       schema: CreateWordSearchSchema,
+      file_fields: [
+        { name: 'thumbnail_image', maxCount: 1 }, // ✅ Tambahkan ini
+      ],
     }),
     async (
       request: AuthedRequest<{}, {}, ICreateWordSearch>,
@@ -134,6 +137,7 @@ export const WordSearchController = Router()
     validateAuth({}),
     validateBody({
       schema: UpdateWordSearchSchema,
+      file_fields: [{ name: 'thumbnail_image', maxCount: 1 }],
     }),
     async (
       request: AuthedRequest<{ game_id: string }, {}, IUpdateWordSearch>,

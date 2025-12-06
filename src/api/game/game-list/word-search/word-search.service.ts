@@ -11,12 +11,22 @@ import {
   type IWordSearchWord,
   prisma,
 } from '@/common';
+import { FileManager } from '@/utils';
 
 import {
   type ICheckAnswer,
   type ICreateWordSearch,
   type IUpdateWordSearch,
 } from './schema';
+
+interface IGridGenerationData {
+  name: string;
+  words: Array<{ word: string; clue?: string }>;
+  grid_size: number;
+  time_limit: number;
+  lives: number;
+  directions: IWordSearchDirection[];
+}
 
 export abstract class WordSearchService {
   // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -27,6 +37,11 @@ export abstract class WordSearchService {
 
     const newWordSearchId = v4();
     const wordSearchTemplateId = await this.getGameTemplateId();
+
+    const thumbnailImagePath = await FileManager.upload(
+      `game/word-search/${newWordSearchId}`,
+      data.thumbnail_image,
+    );
 
     const gridData = this.generateGrid(data);
 
@@ -52,7 +67,7 @@ export abstract class WordSearchService {
         creator_id: user_id,
         name: data.name,
         description: data.description,
-        thumbnail_image: 'null',
+        thumbnail_image: thumbnailImagePath,
         is_published: data.is_publish_immediately,
         game_json: wordSearchJson as unknown as Prisma.InputJsonValue,
       },
@@ -115,6 +130,7 @@ export abstract class WordSearchService {
         id: true,
         name: true,
         description: true,
+        thumbnail_image: true,
         is_published: true,
         game_json: true,
         creator_id: true,
@@ -148,10 +164,22 @@ export abstract class WordSearchService {
 
     const oldWordSearchJson = game.game_json as IWordSearchJson | null;
 
+    let thumbnailImagePath = game.thumbnail_image;
+
+    if (data.thumbnail_image) {
+      thumbnailImagePath = await FileManager.upload(
+        `game/word-search/${game_id}`,
+        data.thumbnail_image,
+      );
+
+      if (game.thumbnail_image) {
+        await FileManager.remove(game.thumbnail_image);
+      }
+    }
+
     let wordSearchJson: IWordSearchJson;
 
     if (data.words || data.grid_size) {
-      // Mengganti ternary dengan operator logika (sudah aman)
       const wordsToUse =
         data.words ||
         (oldWordSearchJson?.words || []).map((w: IWordSearchWord) => ({
@@ -169,7 +197,6 @@ export abstract class WordSearchService {
           data.directions ||
           oldWordSearchJson?.directions ||
           (['horizontal', 'vertical', 'diagonal'] as IWordSearchDirection[]),
-        is_publish_immediately: false,
       });
 
       wordSearchJson = {
@@ -210,6 +237,7 @@ export abstract class WordSearchService {
       data: {
         name: data.name,
         description: data.description,
+        thumbnail_image: thumbnailImagePath,
         is_published: data.is_publish,
         game_json: wordSearchJson as unknown as Prisma.InputJsonValue,
       },
@@ -353,6 +381,7 @@ export abstract class WordSearchService {
       where: { id: game_id },
       select: {
         id: true,
+        thumbnail_image: true,
         creator_id: true,
       },
     });
@@ -365,18 +394,21 @@ export abstract class WordSearchService {
         'User cannot delete this game',
       );
 
+    if (game.thumbnail_image) {
+      await FileManager.remove(game.thumbnail_image);
+    }
+
     await prisma.games.delete({ where: { id: game_id } });
 
     return { id: game_id };
   }
 
-  private static generateGrid(data: ICreateWordSearch): {
+  private static generateGrid(data: IGridGenerationData): {
     grid: string[][];
     placed_words: IWordSearchPlacedWord[];
   } {
     const { words, grid_size: gridSize, directions } = data;
 
-    // Baris 388 (Perbaikan): Mengatasi `unicorn/no-new-array` dengan Array.from yang eksplisit.
     const grid: string[][] = Array.from({ length: gridSize }, () =>
       Array.from({ length: gridSize }, () => ''),
     );
@@ -411,8 +443,6 @@ export abstract class WordSearchService {
       }
 
       if (!isPlaced) {
-        // Baris 480 (Perbaikan): Menggunakan wrapper logWarning agar lint tidak
-        // menandai pemanggilan sebagai `no-unsafe-call`.
         this.logWarning(`Failed to place word: ${word}`);
       }
     }

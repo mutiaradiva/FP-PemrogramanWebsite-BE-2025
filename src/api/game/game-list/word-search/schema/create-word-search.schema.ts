@@ -1,6 +1,6 @@
 import z from 'zod';
 
-import { StringToBooleanSchema } from '@/common';
+import { fileSchema, StringToBooleanSchema } from '@/common';
 
 export const WordItemSchema = z.object({
   word: z.string().min(2).max(20).trim(),
@@ -10,6 +10,7 @@ export const WordItemSchema = z.object({
 export const CreateWordSearchSchema = z.object({
   name: z.string().min(1).max(128).trim(),
   description: z.string().max(256).trim().optional(),
+  thumbnail_image: fileSchema({}),
   words: z.array(WordItemSchema).min(3).max(20),
   grid_size: z.coerce.number().min(8).max(20).default(15),
   time_limit: z.coerce.number().min(30).max(600).default(480),
