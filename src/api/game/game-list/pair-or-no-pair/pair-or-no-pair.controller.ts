@@ -13,40 +13,37 @@ import {
   validateBody,
 } from '@/common';
 
-import { QuizService } from './quiz.service';
+import { PairOrNoPairService } from './pair-or-no-pair.service';
 import {
-  CheckAnswerSchema,
-  CreateQuizSchema,
-  type ICheckAnswer,
-  type ICreateQuiz,
-  type IUpdateQuiz,
-  UpdateQuizSchema,
+  CreatePairOrNoPairSchema,
+  EvaluateSchema,
+  type ICreatePairOrNoPair,
+  type IEvaluate,
+  type IUpdatePairOrNoPair,
+  UpdatePairOrNoPairSchema,
 } from './schema';
 
-export const QuizController = Router()
+export const PairOrNoPairController = Router()
   .post(
     '/',
     validateAuth({}),
     validateBody({
-      schema: CreateQuizSchema,
-      file_fields: [
-        { name: 'thumbnail_image', maxCount: 1 },
-        { name: 'files_to_upload', maxCount: 20 },
-      ],
+      schema: CreatePairOrNoPairSchema,
+      file_fields: [{ name: 'thumbnail_image', maxCount: 1 }],
     }),
     async (
-      request: AuthedRequest<{}, {}, ICreateQuiz>,
+      request: AuthedRequest<{}, {}, ICreatePairOrNoPair>,
       response: Response,
       next: NextFunction,
     ) => {
       try {
-        const newGame = await QuizService.createQuiz(
+        const newGame = await PairOrNoPairService.createGame(
           request.body,
           request.user!.user_id,
         );
         const result = new SuccessResponse(
           StatusCodes.CREATED,
-          'Quiz created',
+          'Game created',
           newGame,
         );
 
@@ -65,7 +62,7 @@ export const QuizController = Router()
       next: NextFunction,
     ) => {
       try {
-        const game = await QuizService.getQuizGameDetail(
+        const game = await PairOrNoPairService.getGameDetail(
           request.params.game_id,
           request.user!.user_id,
           request.user!.role,
@@ -90,7 +87,7 @@ export const QuizController = Router()
       next: NextFunction,
     ) => {
       try {
-        const game = await QuizService.getQuizPlay(
+        const game = await PairOrNoPairService.getGamePlay(
           request.params.game_id,
           true,
         );
@@ -115,9 +112,9 @@ export const QuizController = Router()
       next: NextFunction,
     ) => {
       try {
-        const game = await QuizService.getQuizPlay(
+        const game = await PairOrNoPairService.getGamePlay(
           request.params.game_id,
-          true,
+          false,
           request.user!.user_id,
           request.user!.role,
         );
@@ -137,19 +134,16 @@ export const QuizController = Router()
     '/:game_id',
     validateAuth({}),
     validateBody({
-      schema: UpdateQuizSchema,
-      file_fields: [
-        { name: 'thumbnail_image', maxCount: 1 },
-        { name: 'files_to_upload', maxCount: 20 },
-      ],
+      schema: UpdatePairOrNoPairSchema,
+      file_fields: [{ name: 'thumbnail_image', maxCount: 1 }],
     }),
     async (
-      request: AuthedRequest<{ game_id: string }, {}, IUpdateQuiz>,
+      request: AuthedRequest<{ game_id: string }, {}, IUpdatePairOrNoPair>,
       response: Response,
       next: NextFunction,
     ) => {
       try {
-        const updatedGame = await QuizService.updateQuiz(
+        const updatedGame = await PairOrNoPairService.updateGame(
           request.body,
           request.params.game_id,
           request.user!.user_id,
@@ -157,38 +151,11 @@ export const QuizController = Router()
         );
         const result = new SuccessResponse(
           StatusCodes.OK,
-          'Quiz updated',
+          'Game updated',
           updatedGame,
         );
 
         return response.status(result.statusCode).json(result.json());
-      } catch (error) {
-        return next(error);
-      }
-    },
-  )
-  .post(
-    '/:game_id/check',
-    validateBody({ schema: CheckAnswerSchema }),
-    async (
-      request: Request<{ game_id: string }, {}, ICheckAnswer>,
-      response: Response,
-      next: NextFunction,
-    ) => {
-      try {
-        const result = await QuizService.checkAnswer(
-          request.body,
-          request.params.game_id,
-        );
-        const successResponse = new SuccessResponse(
-          StatusCodes.OK,
-          'Answer checked successfully',
-          result,
-        );
-
-        return response
-          .status(successResponse.statusCode)
-          .json(successResponse.json());
       } catch (error) {
         return next(error);
       }
@@ -203,7 +170,7 @@ export const QuizController = Router()
       next: NextFunction,
     ) => {
       try {
-        const result = await QuizService.deleteQuiz(
+        const result = await PairOrNoPairService.deleteGame(
           request.params.game_id,
           request.user!.user_id,
           request.user!.role,
@@ -211,7 +178,64 @@ export const QuizController = Router()
 
         const successResponse = new SuccessResponse(
           StatusCodes.OK,
-          'Quiz deleted successfully',
+          'Game deleted successfully',
+          result,
+        );
+
+        return response
+          .status(successResponse.statusCode)
+          .json(successResponse.json());
+      } catch (error) {
+        return next(error);
+      }
+    },
+  )
+  .post(
+    '/:game_id/evaluate',
+    validateAuth({ optional: true }),
+    validateBody({ schema: EvaluateSchema }),
+    async (
+      request: AuthedRequest<{ game_id: string }, {}, IEvaluate>,
+      response: Response,
+      next: NextFunction,
+    ) => {
+      try {
+        const result = await PairOrNoPairService.evaluateGame(
+          request.body,
+          request.params.game_id,
+          request.user?.user_id,
+        );
+
+        const successResponse = new SuccessResponse(
+          StatusCodes.OK,
+          'Score submitted successfully',
+          result,
+        );
+
+        return response
+          .status(successResponse.statusCode)
+          .json(successResponse.json());
+      } catch (error) {
+        return next(error);
+      }
+    },
+  )
+  .get(
+    '/:game_id/leaderboard',
+    async (
+      request: Request<{ game_id: string }, {}, {}, { difficulty?: string }>,
+      response: Response,
+      next: NextFunction,
+    ) => {
+      try {
+        const result = await PairOrNoPairService.getLeaderboard(
+          request.params.game_id,
+          request.query.difficulty,
+        );
+
+        const successResponse = new SuccessResponse(
+          StatusCodes.OK,
+          'Leaderboard retrieved successfully',
           result,
         );
 

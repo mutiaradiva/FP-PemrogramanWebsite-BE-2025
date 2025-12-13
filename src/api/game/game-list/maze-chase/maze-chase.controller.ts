@@ -13,46 +13,43 @@ import {
   validateBody,
 } from '@/common';
 
-import { QuizService } from './quiz.service';
+import { MazeChaseService } from './maze-chase.service';
 import {
-  CheckAnswerSchema,
-  CreateQuizSchema,
-  type ICheckAnswer,
-  type ICreateQuiz,
-  type IUpdateQuiz,
-  UpdateQuizSchema,
+  CheckMazeChaseAnswerSchema,
+  CreateMazeChaseSchema,
+  type ICheckMazeChaseAnswer,
+  type ICreateMazeChase,
+  type IUpdateMazeChase,
+  UpdateMazeChaseSchema,
 } from './schema';
 
-export const QuizController = Router()
+export const MazeChaseController = Router()
   .post(
     '/',
     validateAuth({}),
     validateBody({
-      schema: CreateQuizSchema,
-      file_fields: [
-        { name: 'thumbnail_image', maxCount: 1 },
-        { name: 'files_to_upload', maxCount: 20 },
-      ],
+      schema: CreateMazeChaseSchema,
+      file_fields: [{ name: 'thumbnail_image', maxCount: 1 }],
     }),
     async (
-      request: AuthedRequest<{}, {}, ICreateQuiz>,
+      request: AuthedRequest<{}, {}, ICreateMazeChase>,
       response: Response,
       next: NextFunction,
     ) => {
       try {
-        const newGame = await QuizService.createQuiz(
+        const newGame = await MazeChaseService.createMazeChase(
           request.body,
           request.user!.user_id,
         );
         const result = new SuccessResponse(
           StatusCodes.CREATED,
-          'Quiz created',
+          'Maze Chase created',
           newGame,
         );
 
         return response.status(result.statusCode).json(result.json());
       } catch (error) {
-        return next(error);
+        next(error);
       }
     },
   )
@@ -65,7 +62,7 @@ export const QuizController = Router()
       next: NextFunction,
     ) => {
       try {
-        const game = await QuizService.getQuizGameDetail(
+        const game = await MazeChaseService.getMazeChaseDetail(
           request.params.game_id,
           request.user!.user_id,
           request.user!.role,
@@ -90,7 +87,7 @@ export const QuizController = Router()
       next: NextFunction,
     ) => {
       try {
-        const game = await QuizService.getQuizPlay(
+        const game = await MazeChaseService.getMazeChasePlay(
           request.params.game_id,
           true,
         );
@@ -115,7 +112,7 @@ export const QuizController = Router()
       next: NextFunction,
     ) => {
       try {
-        const game = await QuizService.getQuizPlay(
+        const game = await MazeChaseService.getMazeChasePlay(
           request.params.game_id,
           true,
           request.user!.user_id,
@@ -137,19 +134,16 @@ export const QuizController = Router()
     '/:game_id',
     validateAuth({}),
     validateBody({
-      schema: UpdateQuizSchema,
-      file_fields: [
-        { name: 'thumbnail_image', maxCount: 1 },
-        { name: 'files_to_upload', maxCount: 20 },
-      ],
+      schema: UpdateMazeChaseSchema,
+      file_fields: [{ name: 'thumbnail_image', maxCount: 1 }],
     }),
     async (
-      request: AuthedRequest<{ game_id: string }, {}, IUpdateQuiz>,
+      request: AuthedRequest<{ game_id: string }, {}, IUpdateMazeChase>,
       response: Response,
       next: NextFunction,
     ) => {
       try {
-        const updatedGame = await QuizService.updateQuiz(
+        const updatedGame = await MazeChaseService.updateMazeChase(
           request.body,
           request.params.game_id,
           request.user!.user_id,
@@ -157,26 +151,26 @@ export const QuizController = Router()
         );
         const result = new SuccessResponse(
           StatusCodes.OK,
-          'Quiz updated',
+          'Maze Chase updated',
           updatedGame,
         );
 
         return response.status(result.statusCode).json(result.json());
       } catch (error) {
-        return next(error);
+        next(error);
       }
     },
   )
   .post(
     '/:game_id/check',
-    validateBody({ schema: CheckAnswerSchema }),
+    validateBody({ schema: CheckMazeChaseAnswerSchema }),
     async (
-      request: Request<{ game_id: string }, {}, ICheckAnswer>,
+      request: Request<{ game_id: string }, {}, ICheckMazeChaseAnswer>,
       response: Response,
       next: NextFunction,
     ) => {
       try {
-        const result = await QuizService.checkAnswer(
+        const result = await MazeChaseService.checkAnswer(
           request.body,
           request.params.game_id,
         );
@@ -190,7 +184,7 @@ export const QuizController = Router()
           .status(successResponse.statusCode)
           .json(successResponse.json());
       } catch (error) {
-        return next(error);
+        next(error);
       }
     },
   )
@@ -203,7 +197,7 @@ export const QuizController = Router()
       next: NextFunction,
     ) => {
       try {
-        const result = await QuizService.deleteQuiz(
+        const result = await MazeChaseService.deleteMazeChase(
           request.params.game_id,
           request.user!.user_id,
           request.user!.role,
@@ -211,7 +205,7 @@ export const QuizController = Router()
 
         const successResponse = new SuccessResponse(
           StatusCodes.OK,
-          'Quiz deleted successfully',
+          'Maze Chase deleted successfully',
           result,
         );
 

@@ -13,40 +13,37 @@ import {
   validateBody,
 } from '@/common';
 
-import { QuizService } from './quiz.service';
 import {
   CheckAnswerSchema,
-  CreateQuizSchema,
+  CreateTypeSpeedSchema,
   type ICheckAnswer,
-  type ICreateQuiz,
-  type IUpdateQuiz,
-  UpdateQuizSchema,
+  type ICreateTypeSpeed,
+  type IUpdateTypeSpeed,
+  UpdateTypeSpeedSchema,
 } from './schema';
+import { TypeSpeedService } from './type-speed.service';
 
-export const QuizController = Router()
+export const TypeSpeedController = Router()
   .post(
     '/',
     validateAuth({}),
     validateBody({
-      schema: CreateQuizSchema,
-      file_fields: [
-        { name: 'thumbnail_image', maxCount: 1 },
-        { name: 'files_to_upload', maxCount: 20 },
-      ],
+      schema: CreateTypeSpeedSchema,
+      file_fields: [{ name: 'thumbnail_image', maxCount: 1 }],
     }),
     async (
-      request: AuthedRequest<{}, {}, ICreateQuiz>,
+      request: AuthedRequest<{}, {}, ICreateTypeSpeed>,
       response: Response,
       next: NextFunction,
     ) => {
       try {
-        const newGame = await QuizService.createQuiz(
+        const newGame = await TypeSpeedService.createGame(
           request.body,
           request.user!.user_id,
         );
         const result = new SuccessResponse(
           StatusCodes.CREATED,
-          'Quiz created',
+          'Game created',
           newGame,
         );
 
@@ -65,7 +62,7 @@ export const QuizController = Router()
       next: NextFunction,
     ) => {
       try {
-        const game = await QuizService.getQuizGameDetail(
+        const game = await TypeSpeedService.getGameDetail(
           request.params.game_id,
           request.user!.user_id,
           request.user!.role,
@@ -90,7 +87,7 @@ export const QuizController = Router()
       next: NextFunction,
     ) => {
       try {
-        const game = await QuizService.getQuizPlay(
+        const game = await TypeSpeedService.getGamePlay(
           request.params.game_id,
           true,
         );
@@ -115,9 +112,9 @@ export const QuizController = Router()
       next: NextFunction,
     ) => {
       try {
-        const game = await QuizService.getQuizPlay(
+        const game = await TypeSpeedService.getGamePlay(
           request.params.game_id,
-          true,
+          false,
           request.user!.user_id,
           request.user!.role,
         );
@@ -137,19 +134,16 @@ export const QuizController = Router()
     '/:game_id',
     validateAuth({}),
     validateBody({
-      schema: UpdateQuizSchema,
-      file_fields: [
-        { name: 'thumbnail_image', maxCount: 1 },
-        { name: 'files_to_upload', maxCount: 20 },
-      ],
+      schema: UpdateTypeSpeedSchema,
+      file_fields: [{ name: 'thumbnail_image', maxCount: 1 }],
     }),
     async (
-      request: AuthedRequest<{ game_id: string }, {}, IUpdateQuiz>,
+      request: AuthedRequest<{ game_id: string }, {}, IUpdateTypeSpeed>,
       response: Response,
       next: NextFunction,
     ) => {
       try {
-        const updatedGame = await QuizService.updateQuiz(
+        const updatedGame = await TypeSpeedService.updateGame(
           request.body,
           request.params.game_id,
           request.user!.user_id,
@@ -157,7 +151,7 @@ export const QuizController = Router()
         );
         const result = new SuccessResponse(
           StatusCodes.OK,
-          'Quiz updated',
+          'Game updated',
           updatedGame,
         );
 
@@ -176,7 +170,7 @@ export const QuizController = Router()
       next: NextFunction,
     ) => {
       try {
-        const result = await QuizService.checkAnswer(
+        const result = await TypeSpeedService.checkAnswer(
           request.body,
           request.params.game_id,
         );
@@ -203,7 +197,7 @@ export const QuizController = Router()
       next: NextFunction,
     ) => {
       try {
-        const result = await QuizService.deleteQuiz(
+        const result = await TypeSpeedService.deleteGame(
           request.params.game_id,
           request.user!.user_id,
           request.user!.role,
@@ -211,7 +205,7 @@ export const QuizController = Router()
 
         const successResponse = new SuccessResponse(
           StatusCodes.OK,
-          'Quiz deleted successfully',
+          'Game deleted successfully',
           result,
         );
 
